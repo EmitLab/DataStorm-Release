@@ -1,0 +1,10 @@
+[
+{"name" : "Jacksonville", "lat" : 30.239, "lng" : -81.659, "link": ["Orlando","Tallahassee", "Gainsville"]},
+{"name" : "Orlando",      "lat" : 28.537, "lng" : -81.379, "link": ["Gainsville","Jacksonville","Tampa", "Miami"]},
+{"name" : "Tampa",        "lat" : 27.950, "lng" : -82.458, "link": ["Gainsville","Orlando", "Miami"]},
+{"name" : "Miami",        "lat" : 25.763, "lng" : -80.193, "link": ["Orlando","Tampa"]},
+{"name" : "Gainsville",   "lat" : 29.651, "lng" : -82.325, "link": ["JacksonVille", "Orlando","Tallahassee","Tampa"]},
+{"name" : "Tallahassee",  "lat" : 30.438, "lng" : -84.280, "link": ["Gainsville","Jacksonville","Penasacola","Panama City"]},
+{"name" : "Panama City",  "lat" : 30.158, "lng" : -85.660, "link": ["Penasacola", "Tallahassee"]},
+{"name" : "Penasacola",   "lat" : 30.421, "lng" : -87.217, "link": ["Panama City", "Tallahassee"]}
+]

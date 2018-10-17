@@ -1,0 +1,71 @@
+#map {
+	height: 100%;
+}
+
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+.in {
+	opacity: .9;
+}
+
+#sidebar {
+	background-color: white;
+}
+
+.nav {
+	background-color: #c9c9c9;
+}
+
+.nav > li {
+	padding: 12px 8px 12px 8px;
+}
+
+.nav > li > a {
+	text-decoration: none !important;
+}
+
+.nav > li.active {
+	background-color: white;
+}
+
+.project-name {
+	font-family: 'Gugi', cursive;
+	padding-right: 2%;
+	overflow: hidden;
+    white-space: nowrap;
+}
+
+.data-layer-name {
+	padding-left: 20px;
+}
+
+.margin-bottom-15 {
+	margin-bottom: 15px !important;
+}
+
+.h-90 {
+	height: 90% !important;
+}
+
+.custom-control-label {
+	font-weight: bold;
+}
+
+.slider-handle {
+	border-radius: .25rem !important;
+	background-color: #0062cc !important;
+	border-color: #005cbf !important;
+	background-image: none !important;
+}
+
+.slider-selection {
+	background-color: #bababa;
+}
+
+#startSlider:hover, #endSlider:hover {
+	cursor: pointer;
+}

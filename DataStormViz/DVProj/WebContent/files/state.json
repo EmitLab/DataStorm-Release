@@ -1,0 +1,85 @@
+[{
+		"ip": "192.168.0.1",
+		"instance": 0.0,
+		"status": "idle",
+		"model_type": "flood",
+		"pool": {
+			"in": [],
+			"running": [{
+				"flood_depth": "123",
+				"humidity": "456"
+			}],
+			"out": []
+		}
+	},
+	{
+		"ip": "192.168.0.2",
+		"instance": 1.0,
+		"status": "idle",
+		"model_type": "flood",
+		"pool": {
+			"in": [],
+			"running": [{
+				"flood_depth": "789",
+				"humidity": "1011"
+			}],
+			"out": []
+		}
+	},
+	{
+		"ip": "192.168.0.3",
+		"instance": 2.0,
+		"status": "running",
+		"model_type": "hurricane",
+		"pool": {
+			"in": [],
+			"running": [{
+				"wind_speed": "321",
+				"humidity": "654"
+			}],
+			"out": []
+		}
+	},
+	{
+		"ip": "192.168.0.4",
+		"instance": 3.0,
+		"status": "idle",
+		"model_type": "hurricane",
+		"pool": {
+			"in": [],
+			"running": [{
+				"wind_speed": "987",
+				"humidity": "765"
+			}],
+			"out": []
+		}
+	},
+	{
+		"ip": "192.168.0.5",
+		"instance": 4.0,
+		"status": "idle",
+		"model_type": "human_mobility",
+		"pool": {
+			"in": [],
+			"running": [{
+				"parameter_1": "0098",
+				"parameter_2": "987"
+			}],
+			"out": []
+		}
+	},
+	{
+		"ip": "192.168.0.6",
+		"instance": 5.0,
+		"status": "idle",
+		"model_type": "human_mobility",
+		"pool": {
+			"in": [],
+			"running": [{
+				"parameter_1": "909",
+				"parameter_2": "356"
+			}],
+			"out": []
+		}
+	}
+]

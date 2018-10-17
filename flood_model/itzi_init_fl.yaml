@@ -1,0 +1,42 @@
+---
+- hosts: testhost
+  become: true
+  become_method: sudo
+  gather_facts: no
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  tasks:
+    - name: update the apt-get cache & do all upgrades
+      apt:
+        dpkg_options: 'force-confnew,force-confdef'
+        upgrade: dist
+        update_cache: true
+    - name: install packages required for the module
+      action: apt pkg={{item}} state=latest
+      with_items:
+      - grass-core
+      - grass-dev
+      - gzip
+      - tar
+      - wget
+      - python3-numpy
+      - python3-setuptools
+      - python3-pip
+      - python3-dev
+
+    - name: Clean up
+      apt:
+        autoclean: yes
+        autoremove: yes
+
+    - name: Updating `pip3`
+      pip:
+        name: pip
+        executable: pip3
+        extra_args: --upgrade
+
+    - name: Installing Itzi using `pip`
+      pip:
+        name: itzi
+        executable: pip3
+        version: "18.2"

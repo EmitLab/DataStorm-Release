@@ -1,0 +1,6 @@
+{
+  "mongo_ip": "129.114.33.117",
+  "ssh_port": "22",
+  "ssh_key": "dsworker_rsa",
+  "ssh_username": "cc"
+}

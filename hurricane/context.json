@@ -1,0 +1,15 @@
+{
+  "temporal": {
+    "begin": 1530403220,
+    "end": 1530576000,
+    "window_size": 10800
+  },
+  "spatial": {
+    "top": 31,
+    "left": -87.64,
+    "bottom": 24,
+    "right": -80.02,
+    "x_resolution": 0.1,
+    "y_resolution": 0.1
+  }
+}

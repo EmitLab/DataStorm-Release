@@ -1,0 +1,206 @@
+{
+ "name": "Provenance Information",
+ "children": [
+  {
+   "name": "Model A - Hurricane",
+   "children": [
+    {
+     "name": "Static Parameter 1"},
+    {
+     "name": "Static Parameter 2"},
+    {
+     "name": "Static Parameter 3"},
+    {
+     "name": "Configuration 1: Weight = 0.6",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 2: Weight = 0.5",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 3: Weight = 0.4",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Model B - Flood",
+   "children": [
+    {
+     "name": "Manning Coefficient"},
+    {
+     "name": "Digital Elevation Model"},
+    {
+     "name": "Configuration 1: Weight = 0.7",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 3", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 2: Weight = 0.6",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 4", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 3: Weight = 0.6",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 4: Weight = 0.5",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Flood_threshold = 3", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 5: Weight = 0.5",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Flood_threshold = 4", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 6: Weight = 0.4",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Flood_threshold = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 7: Weight = 0.3",
+     "children": [
+      {"name": "Wind_speed = 8", "size": 743},
+      {"name": "Flood_threshold = 3", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 8: Weight = 0.3",
+     "children": [
+      {"name": "Wind_speed = 8", "size": 743},
+      {"name": "Flood_threshold = 4", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 9: Weight = 0.2",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Model C - Human Mobility",
+   "children": [
+    {
+     "name": "Static Parameter 1"},
+    {
+     "name": "Static Parameter 2"},
+    {
+     "name": "Configuration 1: Weight = 0.8",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 3", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 2: Weight = 0.7",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 4", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 3: Weight = 0.6",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 5", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 4: Weight = 0.5",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Flood_threshold = 3", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 5: Weight = 0.5",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Flood_threshold = 4", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 6: Weight = 0.4",
+     "children": [
+      {"name": "Wind_speed = 4", "size": 743},
+      {"name": "Flood_threshold = 5", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 7: Weight = 0.3",
+     "children": [
+      {"name": "Wind_speed = 8", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Flood_threshold = 3", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 8: Weight = 0.3",
+     "children": [
+      {"name": "Wind_speed = 8", "size": 743},
+      {"name": "Flood_threshold = 4", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    },
+    {
+     "name": "Configuration 9: Weight = 0.2",
+     "children": [
+      {"name": "Wind_speed = 2", "size": 743},
+      {"name": "Flood_threshold = 5", "size": 743},
+      {"name": "Traffic_level = 5", "size": 743},
+      {"name": "Details = details.json", "size": 743}
+     ]
+    }
+  ]
+}
+]
+}

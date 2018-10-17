@@ -1,0 +1,70 @@
+[{
+		"model_type": "hurricane",
+		"subactor_state": "WindowManager",
+		"active_context": {
+			"temporal": {
+				"begin": "123456443",
+				"end": "23456790"
+			},
+			"spatial": {
+				"top": "",
+				"left": "",
+				"bottom": "",
+				"right": ""
+			}
+		},
+		"result_pool": {
+			"to_window": [],
+			"to_align": [],
+			"to_sample": [],
+			"to_sync": [],
+			"to_display": []
+		}
+	},
+{
+		"model_type": "flood",
+		"subactor_state": "WindowManager",
+		"active_context": {
+			"temporal": {
+				"begin": "445454545",
+				"end": "5667665677"
+			},
+			"spatial": {
+				"top": "",
+				"left": "",
+				"bottom": "",
+				"right": ""
+			}
+		},
+		"result_pool": {
+			"to_window": [],
+			"to_align": [],
+			"to_sample": [],
+			"to_sync": [],
+			"to_display": []
+		}
+	},
+{
+		"model_type": "human_mobility",
+		"subactor_state": "WindowManager",
+		"active_context": {
+			"temporal": {
+				"begin": "1989898778",
+				"end": "677688766"
+			},
+			"spatial": {
+				"top": "",
+				"left": "",
+				"bottom": "",
+				"right": ""
+			}
+		},
+		"result_pool": {
+			"to_window": [],
+			"to_align": [],
+			"to_sample": [],
+			"to_sync": [],
+			"to_display": []
+		}
+	}
+]
