@@ -9,12 +9,15 @@ import json
 # TODO: it should be loaded from some meta-configuration??
 MY_MODEL = "flood"
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=('127.0.0.1', 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
 # Insert Configuration to MongoDB to extract corresponding parameters
@@ -22,8 +25,8 @@ mongo_server = SSHTunnelForwarder(
 def insertDataAlignConfig():
     global MY_MODEL
     # Connect to MongoDB
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
 
     # Use configuration DB
     ds_config = mongo_client["ds_config"]
@@ -49,8 +52,8 @@ def insertDataAlignConfig():
 def isTemporalAligned(DSAR):
     print (' - Checking alignment...')
     # Connect to MongoDB
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
     ds_config = mongo_client["ds_config"]
     config_db = mongo_client.ds_config.collection
     DS_CONFIG = config_db.find_one()
@@ -72,8 +75,8 @@ def isTemporalAligned(DSAR):
 def temporalConversion(DSAR):
     print(' - Temporal converting...')
     # Connect to MongoDB
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
     ds_config = mongo_client["ds_config"]
     config_db = mongo_client.ds_config.collection
     DS_CONFIG = config_db.find_one()
@@ -96,8 +99,8 @@ def temporalConversion(DSAR):
 def formatConversion(tAlignedDSAR):
     print(' - Format converting...')
     # Connect to MongoDB
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
     config_db = mongo_client.ds_config.collection
     DS_CONFIG = config_db.find_one()
     updated_DSAR = tAlignedDSAR
@@ -122,8 +125,8 @@ def formatConversion(tAlignedDSAR):
 def saveAlignedResult(tAlignedDSAR):
     print(' - Saving aligned data into MPDB...')
     # Connect to MPDB and insert aligned DSAR
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
     ds_results = mongo_client["ds_results"]
     results_db = mongo_client.ds_results.collection
     
@@ -156,8 +159,8 @@ def main():
     print('*** Data Manager ***')
     print(' - Received DSAR_ID:', str(sys.argv[1]))
     DSAR_ID = sys.argv[1]
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
     print(' - Connected to DataStorm MongoDB')
 
     ## Getting Databases and collections
@@ -223,7 +226,7 @@ def main():
     saveReformattedResult(fAlignedDSAR)
 
     # Close the SSH tunnel
-    mongo_server.stop()  
+    MONGO_SERVER.stop()
     print(' - Closed DB connection')
 
 if __name__ == "__main__":

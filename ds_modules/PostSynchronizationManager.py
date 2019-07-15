@@ -25,12 +25,15 @@ DS_STATE_KEPLER = None
 DS_CONFIG = None
 DS_RESULTS = None
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=("127.0.0.1", 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
 
@@ -44,10 +47,10 @@ def initializeDB():
     global DS_CONFIG, DS_RESULTS, DS_STATE
 
     # open the SSH tunnel to the mongo server
-    mongo_server.start()
+    MONGO_SERVER.start()
 
     # connect to mongo
-    mongo_client = pymongo.MongoClient("127.0.0.1", mongo_server.local_bind_port)
+    mongo_client = pymongo.MongoClient("localhost", MONGO_SERVER.local_bind_port)
     print(" - Connected to DataStorm MongoDB")
 
     # DS Results
@@ -353,19 +356,19 @@ def main():
     if current_model_state["subactor_state"] != "PostSynchronizationManager":
         print("Current state: {0}".format(current_model_state["subactor_state"]))
         print("We can't execute, because it's not the PSM's turn yet.")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return
 
     # if nothing to sync, don't sync
     if len(current_model_state["result_pool"]["to_sync"]) == 0:
         print("ZERO model results are ready...")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return  # we were able to align, but there were no records to alignment manager; just exit
 
     # if instances are not ready, don't sync
     if isInstanceReady() is False:
         print("SOME model results are ready...")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return
 
     print("All model results are ready! Here we go...")
@@ -390,7 +393,7 @@ def main():
     print("State change, PSM to OM" + " for model {0}".format(MY_MODEL))
 
     # Exit
-    mongo_server.close()
+    MONGO_SERVER.close()
 
 
 if __name__ == "__main__":

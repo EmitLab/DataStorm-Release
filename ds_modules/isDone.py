@@ -17,12 +17,15 @@ DS_STATE_KEPLER = None
 DS_CONFIG = None
 DS_RESULTS = None
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=("127.0.0.1", 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
 
@@ -31,10 +34,10 @@ def initializeDB():
     global DS_CONFIG, DS_RESULTS, DS_STATE
 
     # open the SSH tunnel to the mongo server
-    mongo_server.start()
+    MONGO_SERVER.start()
 
     # connect to mongo
-    mongo_client = pymongo.MongoClient("127.0.0.1", mongo_server.local_bind_port)
+    mongo_client = pymongo.MongoClient("localhost", MONGO_SERVER.local_bind_port)
     # print(" - Connected to DataStorm MongoDB")
 
     # DS Results
@@ -63,8 +66,9 @@ def main():
     initializeDB()
 
     final_model = findEndModel()
+    #final_model = "hurricane"
     if (final_model == None):
-        print('Error in final model!')
+        #print('Error in final model!')
         return
 
     final_model_state = DS_STATE.kepler.find_one({"model_type": final_model})
@@ -78,7 +82,7 @@ def main():
         print(0)
 
     # Exit
-    mongo_server.close()
+    MONGO_SERVER.close()
 
 
 if __name__ == "__main__":

@@ -14,6 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.asu.ds.db.mongo.MongoConstants;
 //Gson imports
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -21,6 +22,7 @@ import org.bson.Document;
 import org.bson.json.JsonMode;
 import org.bson.json.JsonWriterSettings;
 import org.bson.types.ObjectId;
+import org.json.JSONException;
 
 //Mongo imports
 import com.jcraft.jsch.JSch;
@@ -60,22 +62,10 @@ public class Mongoconn extends HttpServlet {
 		String model_type = data.get("model_type").getAsString();
 		long start_time = data.get("start_time").getAsLong();
 		long end_time = data.get("end_time").getAsLong();
+		int instance = data.get("instance").getAsInt();
 		float threshold = data.get("threshold").getAsFloat();
 		System.out.println(model_type+" "+start_time+" "+end_time);
 		
-		
-		// forwarding ports
-		String LOCAL_HOST = "127.0.0.1";
-		String REMOTE_HOST =  "";  // Remote Server IP address
-		Integer LOCAL_PORT =  "";  // Remote Server Port
-		Integer REMOTE_PORT = 27017; // Default mongodb port
-
-		// ssh connection info
-		String SSH_USER = ""; // Remote Server User Name
-		String SSH_PASSWORD = ""; // Remote Server User password
-		String SSH_HOST =  "";  // Remote Server IP address
-		Integer SSH_PORT =  "";  // Remote Server Port
-
 		Session SSH_SESSION = null;
 
 		try {
@@ -88,18 +78,20 @@ public class Mongoconn extends HttpServlet {
 		    System.out.println	("KeyFile path="+path);
 		    jsch.addIdentity(path, "passphrase");
 		    
-		    //Establish secure tunnel with server
-		    SSH_SESSION = null;
-		    SSH_SESSION = jsch.getSession(SSH_USER, SSH_HOST, SSH_PORT);
-		    SSH_SESSION.setConfig(config);
-		    SSH_SESSION.connect();
-		    System.out.println("Connection established...");
-		    SSH_SESSION.setPortForwardingL(LOCAL_PORT, LOCAL_HOST, REMOTE_PORT);
-		    System.out.println("Port forwarding done...");
+		    MongoConstants mongoconstants = new MongoConstants(getServletContext().getRealPath(""));
+			
+			SSH_SESSION = null;
+			SSH_SESSION = jsch.getSession(mongoconstants.get_ssh_user(), mongoconstants.get_ssh_host(), mongoconstants.get_ssh_port());
+			SSH_SESSION.setConfig(config);
+			SSH_SESSION.connect();
+			System.out.println("Connection established index.jsp...");
+			
+			SSH_SESSION.setPortForwardingL(mongoconstants.get_local_port(), mongoconstants.get_local_host(), mongoconstants.get_remote_port());   
+			
+			System.out.println("Port forwarding done...");
 
-		    //Mongo calls
-		    MongoClient mongoClient = new MongoClient(LOCAL_HOST, LOCAL_PORT);
-		    mongoClient.setReadPreference(ReadPreference.nearest());
+			MongoClient mongoClient = new MongoClient(mongoconstants.get_local_host(), mongoconstants.get_local_port());
+			mongoClient.setReadPreference(ReadPreference.nearest());
 		    System.out.println("Mongo client created...");
 		    
 //		    //Mongo query to list database names
@@ -208,7 +200,7 @@ public class Mongoconn extends HttpServlet {
 		    	System.out.println("Inside human mobility calls for mongo");
 			    database = mongoClient.getDatabase("ds_results"); //specify database
 				collection = database
-						.getCollection("dsfr");  //Specify collection
+						.getCollection("dsdr");  //Specify collection
 
 				whereQuery = new BasicDBObject();
 	     		whereQuery.put("model_type", model_type);
@@ -236,12 +228,17 @@ public class Mongoconn extends HttpServlet {
 		} finally {
 
 			try {
-				SSH_SESSION.delPortForwardingL(LOCAL_PORT);
+				MongoConstants mongoconstants = new MongoConstants(getServletContext().getRealPath(""));
+				SSH_SESSION.delPortForwardingL(mongoconstants.get_local_port());
 			} catch (JSchException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 //		    SSH_SESSION.disconnect();
+ catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 			

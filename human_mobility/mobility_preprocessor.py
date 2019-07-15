@@ -36,11 +36,11 @@ def flooding_conversion():
 
     if MONGO_CLIENT is None:
         # connect to the mongo database using that configuration
-        MONGO_SERVER = SSHTunnelForwarder(("129.114.33.117", 22), ssh_username="cc",
-                                          ssh_pkey="~/.ssh/dsworker_rsa",
-                                          remote_bind_address=('127.0.0.1', 27017))
+        MONGO_SERVER = SSHTunnelForwarder(("ds_core_mongo", 22), ssh_username="cc",
+                                          ssh_pkey="/Users/hwbehren/.ssh/dsworker_rsa",
+                                          remote_bind_address=('localhost', 27017))
         MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
-        MONGO_CLIENT = pymongo.MongoClient('127.0.0.1', MONGO_SERVER.local_bind_port)  # connect to mongo
+        MONGO_CLIENT = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
 
     dsfr_handle = MONGO_CLIENT.ds_results.dsfr
 

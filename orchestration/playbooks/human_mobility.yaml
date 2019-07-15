@@ -1,0 +1,14 @@
+---
+- name: Install Flood model
+  become: true
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Excuting Common Role
+      include_role:
+        name: commons
+        tasks_from: commons
+      vars:
+        extravars: "{{extravars}}"
+

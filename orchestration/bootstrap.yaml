@@ -1,0 +1,16 @@
+datastorm:
+  initial_models:
+    hurricane:
+      count: 2
+    flood:
+      count: 2
+    human_mobility:
+      count: 2
+openstack:
+  base_image: 'BASEIMAGE'
+  base_user: 'USER'
+  key_name: 'KEYFILE'
+  base_password: 'PASSWORD'
+  project_name: 'PROJNAME'
+  auth_url: 'AUTHURL'
+

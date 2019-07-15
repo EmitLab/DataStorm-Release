@@ -1,7 +1,3 @@
-#map {
-	height: 100%;
-}
-
 html, body {
 	height: 100%;
 	margin: 0;
@@ -12,13 +8,21 @@ html, body {
 	opacity: .9;
 }
 
+.map {
+	border: 1px solid #dddddd;
+}
+
+.map.active {
+	border: 1.5px solid #007bff;
+}
+
 #sidebar {
 	background-color: white;
 }
 
-.nav {
+/* .nav {
 	background-color: #c9c9c9;
-}
+} */
 
 .nav > li {
 	padding: 12px 8px 12px 8px;
@@ -47,6 +51,40 @@ html, body {
 	margin-bottom: 15px !important;
 }
 
+.layers > div {
+	padding-top: 8px;
+}
+
+.layers div.fa-toggle-on, .layers div.fa-toggle-off {
+	padding-top: 6px;
+}
+
+
+.col-dark {
+	background-color: #f8f9fa;
+}
+
+.col-sm-1-custom {
+	padding-left: 8px;
+	padding-right: 8px;
+	flex: 0 0 11%;
+	max-width: 11%;
+}
+
+.col-sm-2-custom {
+	padding-left: 8px;
+	padding-right: 8px;
+	flex: 0 0 12%;
+	max-width: 12%;
+}
+
+.col-sm-3-custom {
+	padding-left: 8px;
+	padding-right: 8px;
+	flex: 0 0 18.5%;
+	max-width: 18.5%;
+}
+
 .h-90 {
 	height: 90% !important;
 }
@@ -69,3 +107,4 @@ html, body {
 #startSlider:hover, #endSlider:hover {
 	cursor: pointer;
 }
+

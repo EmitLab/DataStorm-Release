@@ -1,22 +1,29 @@
 import sys
+import uuid
 
 import bson
 import pymongo
 from sshtunnel import SSHTunnelForwarder
 
 # SSH / Mongo Configuration #
-SERVER_KEY = "../job_gateway/dsworker_rsa"
+USE_SSH = True
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
+# SSH / Mongo Configuration #
 MONGO_SERVER = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey=SERVER_KEY,
-    remote_bind_address=('127.0.0.1', 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
-# need the server connection to persist
-MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
-MONGO_CLIENT = pymongo.MongoClient('127.0.0.1', MONGO_SERVER.local_bind_port)  # connect to mongo
+if USE_SSH:
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    MONGO_CLIENT = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
+else:
+    MONGO_CLIENT = pymongo.MongoClient(MONGO_IP)
 
 
 def reset_mongo():
@@ -72,8 +79,18 @@ def reset_mongo():
     MONGO_CLIENT.close()
 
 
+def init_trace():
+    # generate a new trace ID (this is the only place where that can happen - corresponds to a single "run")
+    new_traceid = uuid.uuid4()
+
+    # write the new traceID into the cluster state, for later use
+    kepler_state = MONGO_CLIENT.ds_state.kepler.find()
+
+
+
 def main():
     reset_mongo()
+    init_trace()
 
 
 if __name__ == "__main__":

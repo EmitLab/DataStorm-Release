@@ -8,12 +8,15 @@ from sshtunnel import SSHTunnelForwarder
 
 MY_MODEL = None
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=('127.0.0.1', 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
 
@@ -25,7 +28,7 @@ def main():
     if kepler_state["subactor_state"] != "SamplingManager":
         print("Current state: {0}".format(kepler_state["subactor_state"]))
         print("We can't execute, because it's not the SamplingManagers's turn yet.")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return
 
     dsar_ids, dsar_info = parse_dsar_upstream(mongo_client, sample_config)
@@ -33,7 +36,7 @@ def main():
     if len(dsar_ids) == 0:
         # no data to sample!
         print("No DSARs to sample, stopping...")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return
 
     history = read_history(mongo_client, sample_config)  # TODO: currently does not consider history
@@ -47,7 +50,7 @@ def main():
     print("State change, SM to EM" + " for model {0}".format(MY_MODEL))
 
     print("SamplingManager complete!")
-    mongo_server.stop()  # close the SSH tunnel
+    MONGO_SERVER.stop()  # close the SSH tunnel
 
 
 def init_sampler():
@@ -64,8 +67,8 @@ def init_sampler():
     with open("model.txt") as infile:
         MY_MODEL = infile.readline().replace("\n", "")
 
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
 
     print("Reading DS Config...")
     config_db = mongo_client.ds_config.collection
@@ -238,7 +241,10 @@ def compute_relevance(job_variables, sampling_variables):
         expected = lower + span
 
         diff = abs(expected - job_variables[each_var])
-        relevance = 1 - (diff / (span * 2))  # on a 0.0 to 0.5 normalized inverse scale?
+        if span == 0:
+            relevance = 1
+        else:
+            relevance = 1 - (diff / (span * 2))  # on a 0.0 to 0.5 normalized inverse scale?
         total_relevance = total_relevance + relevance
         relevance_count = relevance_count + 1
 

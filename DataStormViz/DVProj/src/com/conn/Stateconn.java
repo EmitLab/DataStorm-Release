@@ -14,15 +14,15 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.bson.Document;
 import org.bson.json.JsonWriterSettings;
-import org.bson.types.ObjectId;
+import org.json.JSONException;
 
+import com.asu.ds.db.mongo.MongoConstants;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.ReadPreference;
 import com.mongodb.client.MongoCollection;
@@ -56,18 +56,6 @@ public class Stateconn extends HttpServlet {
 			JsonObject data = new Gson().fromJson(request.getReader(), JsonObject.class);
 			String temp = data.get("temp").getAsString();
 			
-			// forwarding ports
-			String LOCAL_HOST = "127.0.0.1";
-			String REMOTE_HOST =  "";  // Remote Server IP address
-			Integer LOCAL_PORT =  "";  // Remote Server Port
-			Integer REMOTE_PORT = 27017; // Default mongodb port
-
-			// ssh connection info
-			String SSH_USER = ""; // Remote Server User Name
-			String SSH_PASSWORD = ""; // Remote Server User password
-			String SSH_HOST =  "";  // Remote Server IP address
-			Integer SSH_PORT =  "";  // Remote Server Port
-
 			Session SSH_SESSION = null;
 
 			try {
@@ -80,18 +68,20 @@ public class Stateconn extends HttpServlet {
 			    System.out.println	("KeyFile path="+path);
 			    jsch.addIdentity(path, "passphrase");
 			    
-			    //Establish secure tunnel with server
+			    MongoConstants mongoconstants = new MongoConstants(getServletContext().getRealPath(""));
+			    
 			    SSH_SESSION = null;
-			    SSH_SESSION = jsch.getSession(SSH_USER, SSH_HOST, SSH_PORT);
-			    SSH_SESSION.setConfig(config);
-			    SSH_SESSION.connect();
-			    System.out.println("Connection established...");
-			    SSH_SESSION.setPortForwardingL(LOCAL_PORT, LOCAL_HOST, REMOTE_PORT);
-			    System.out.println("Port forwarding done...");
+				SSH_SESSION = jsch.getSession(mongoconstants.get_ssh_user(), mongoconstants.get_ssh_host(), mongoconstants.get_ssh_port());
+				SSH_SESSION.setConfig(config);
+				SSH_SESSION.connect();
+				System.out.println("Connection established index.jsp...");
+				
+				SSH_SESSION.setPortForwardingL(mongoconstants.get_local_port(), mongoconstants.get_local_host(), mongoconstants.get_remote_port());   
+				
+				System.out.println("Port forwarding done...");
 
-			    //Mongo calls
-			    MongoClient mongoClient = new MongoClient(LOCAL_HOST, LOCAL_PORT);
-			    mongoClient.setReadPreference(ReadPreference.nearest());
+				MongoClient mongoClient = new MongoClient(mongoconstants.get_local_host(), mongoconstants.get_local_port());
+				mongoClient.setReadPreference(ReadPreference.nearest());
 			    System.out.println("Mongo client created...");
 			    
 			    //START: Step1 Fetch kepler collection data
@@ -160,12 +150,17 @@ public class Stateconn extends HttpServlet {
 			} finally {
 
 				try {
-					SSH_SESSION.delPortForwardingL(LOCAL_PORT);
+					MongoConstants mongoconstants = new MongoConstants(getServletContext().getRealPath(""));
+					SSH_SESSION.delPortForwardingL(mongoconstants.get_local_port());
 				} catch (JSchException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 //			    SSH_SESSION.disconnect();
+				catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 
 			System.out.println("json1= "+json1);

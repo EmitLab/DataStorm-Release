@@ -1,0 +1,52 @@
+---
+- name: Install Flood model
+  become: true
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Excuting Common Role
+      include_role:
+        name: commons
+        tasks_from: commons
+      vars:  
+        extravars: "{{extravars}}"
+
+    - name: Download and unpack the model
+      become_user: cc
+      become_method: su
+      unarchive:
+        src: http://www.public.asu.edu/~hwbehren/files/flood.zip
+        dest: /home/cc/
+        remote_src: yes
+
+    - name: Get any updates and refresh cache
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+      register: apt_status
+      until: apt_status is success
+      delay: 10
+      retries: 60
+
+    - name: Run the needed installations
+      apt:
+        name: ['python3-pip', 'python3-dev', 'build-essential']
+        state: latest
+      register: installation
+
+    # install pip dependencies
+    - name: Upgrade pip core
+      when: installation.changed
+      become_user: cc
+      become_method: su
+      shell: sudo -H python3 -m pip install --upgrade pip setuptools
+
+    - name: Install pip dependencies
+      pip:
+        name:
+          - pymongo
+          - sshtunnel
+        executable: /usr/local/bin/pip3
+        extra_args: --upgrade

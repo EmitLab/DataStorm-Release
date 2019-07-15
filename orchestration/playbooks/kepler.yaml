@@ -1,0 +1,155 @@
+# Install Kepler
+---
+- name: Install Kepler
+  become: true
+  hosts: all
+  gather_facts: no
+
+  # vars: mongo_ip, ssh_keyname, ssh_payload
+
+  tasks:
+    - name: Excuting Common Role
+      include_role:
+        name: commons
+        tasks_from: commons
+      vars:  
+        extravars: "{{extravars}}"
+
+    - name: Wait for connection to come up, if needed
+      wait_for_connection:
+        timeout: 300
+        sleep: 5
+
+    # baseline config stuff
+    - name: Get any updates and refresh cache
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+      register: apt_status
+      until: apt_status is success
+      delay: 10
+      retries: 60
+
+    - name: Run the needed installations
+      apt:
+        name: ['python3-pip', 'python3-dev', 'build-essential', 'expect', 'default-jdk', 'ubuntu-desktop', 'gnome-panel', 'gnome-settings-daemon', 'metacity', 'nautilus', 'gnome-terminal', 'vnc4server']
+        state: latest
+      register: installation
+
+    - name: Update environment variables
+      when: installation.changed
+      lineinfile:
+        path: /etc/environment
+        regexp: '^JAVA_HOME.+'
+        line: 'JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/bin/"'
+        state: present
+        create: yes
+
+    - name: Alias python to Python3
+      when: installation.changed
+      lineinfile:
+        path: /home/cc/.bashrc
+        regexp: "^alias python=python3$"
+        line: "alias python=python3"
+        state: present
+        create: yes
+
+    # install pip dependencies
+    - name: Upgrade pip core
+      when: installation.changed
+      become_user: cc
+      become_method: su
+      shell: sudo -H python3 -m pip install --upgrade pip setuptools
+
+    - name: Install pip dependencies
+      pip:
+        name:
+          - numpy
+          - pymongo
+          - sshtunnel
+        executable: /usr/local/bin/pip3
+        extra_args: --upgrade
+
+    # install SSH info
+    - name: Create SSH private keyfile
+      become_user: cc
+      become_method: su
+      file:
+        path: "/home/cc/.ssh/{{ssh_keyname}}"
+        state: touch
+        mode: 0600
+        access_time: preserve
+        modification_time: preserve
+      register: ssh_created
+
+    - name: Inject SSH payload
+      when: ssh_created.changed
+      blockinfile:
+        path: "/home/cc/.ssh/{{ssh_keyname}}"
+        block: "{{ssh_payload}}"
+        marker: ""
+        marker_begin: ""
+        marker_end: ""
+
+    - name: Add configuration to use that file
+      when: ssh_created.changed
+      copy:
+        content: "IdentityFile ~/.ssh/{{ssh_keyname}}"
+        dest: "/home/cc/.ssh/config"
+        owner: cc
+        group: cc
+        mode: 0600
+
+    # do kepler stuff
+    - name: Creates directory for Kepler to unzip into
+      file:
+        path: /opt/kepler
+        state: directory
+        owner: cc
+        group: cc
+      register: kepler
+
+    - name: Download and unpack the Kepler installation
+      when: kepler.changed
+      become_user: cc
+      become_method: su
+      unarchive:
+        src: https://code.kepler-project.org/code/kepler/releases/installers/2.5/Kepler-2.5-linux.tar.gz
+        dest: /opt/kepler
+        remote_src: yes
+
+    - name: Download the Kepler .kar configurations
+      when: kepler.changed
+      become_user: cc
+      become_method: su
+      unarchive:
+        src: http://www.public.asu.edu/~hwbehren/files/datastorm.zip
+        dest: /home/cc/
+        remote_src: yes
+
+    - name: Reconfigure Kepler
+      become_user: cc
+      become_method: su
+      when: kepler.changed
+      shell: ./module-manager.sh -change-to biokepler-1.2.0; ./module-manager.sh -change-to kepler-tasks-2.5.1
+      args:
+        chdir: /opt/kepler/Kepler-2.5/
+
+    # reconfigure all of the modules to point to the correct mongo IP and keyfile
+    # TODO: these implementations need to be fixed to use a single, common config file! this is a mess
+    - name: Change *all* the hard-codings, IP version
+      when: kepler.changed
+      replace:
+        path: "{{ item }}"
+        regexp: '(\s+)MONGO_IP = .*(\s+.*)?$'
+        replace: '\1MONGO_IP = "{{ mongo_ip }}"\2'
+      loop: ["/home/cc/DataStorm/ds_modules/hurricane_model/isDone.py", "/home/cc/DataStorm/ds_modules/hurricane_model/WindowManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/AlignmentManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/SamplingManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/ExecutionManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/PostSynchronizationManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/OutputManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/LaunchManager.py", "/home/cc/DataStorm/ds_modules/flood_model/isDone.py", "/home/cc/DataStorm/ds_modules/flood_model/WindowManager.py", "/home/cc/DataStorm/ds_modules/flood_model/AlignmentManager.py", "/home/cc/DataStorm/ds_modules/flood_model/SamplingManager.py", "/home/cc/DataStorm/ds_modules/flood_model/ExecutionManager.py", "/home/cc/DataStorm/ds_modules/flood_model/PostSynchronizationManager.py", "/home/cc/DataStorm/ds_modules/flood_model/OutputManager.py", "/home/cc/DataStorm/ds_modules/flood_model/LaunchManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/isDone.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/WindowManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/AlignmentManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/SamplingManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/ExecutionManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/PostSynchronizationManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/OutputManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/LaunchManager.py"]
+
+    - name: Change *all* the hard-codings, SSH key version
+      when: kepler.changed
+      replace:
+        path: "{{ item }}"
+        regexp: '(\s+)MONGO_KEYFILE = .*(\s+.*)?$'
+        replace: '\1MONGO_KEYFILE = "{{ ssh_keyname }}"\2'
+      loop: ["/home/cc/DataStorm/ds_modules/hurricane_model/isDone.py", "/home/cc/DataStorm/ds_modules/hurricane_model/WindowManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/AlignmentManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/SamplingManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/ExecutionManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/PostSynchronizationManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/OutputManager.py", "/home/cc/DataStorm/ds_modules/hurricane_model/LaunchManager.py", "/home/cc/DataStorm/ds_modules/flood_model/isDone.py", "/home/cc/DataStorm/ds_modules/flood_model/WindowManager.py", "/home/cc/DataStorm/ds_modules/flood_model/AlignmentManager.py", "/home/cc/DataStorm/ds_modules/flood_model/SamplingManager.py", "/home/cc/DataStorm/ds_modules/flood_model/ExecutionManager.py", "/home/cc/DataStorm/ds_modules/flood_model/PostSynchronizationManager.py", "/home/cc/DataStorm/ds_modules/flood_model/OutputManager.py", "/home/cc/DataStorm/ds_modules/flood_model/LaunchManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/isDone.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/WindowManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/AlignmentManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/SamplingManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/ExecutionManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/PostSynchronizationManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/OutputManager.py", "/home/cc/DataStorm/ds_modules/human_mobility_model/LaunchManager.py"]

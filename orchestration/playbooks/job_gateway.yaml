@@ -1,0 +1,85 @@
+---
+- name: Install JobGateway
+  become: true
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Wait for connection to come up, if needed
+      wait_for_connection:
+        timeout: 300
+        sleep: 5
+
+    - name: Check if venv exists
+      stat:
+        path: /home/cc/job_gateway
+      register: folder
+
+    - name: Download and unpack the base venv
+      when: folder.stat.exists == false
+      become_user: cc
+      become_method: su
+      unarchive:
+        src: "{{ role_path }}/files/job_gateway.zip"
+        dest: /home/cc/
+
+# inject SSH key
+    - name: Create SSH private keyfile
+      when: folder.stat.exists == false
+      become_user: cc
+      become_method: su
+      file:
+        path: "/home/cc/job_gateway/{{ssh_key}}"
+        state: touch
+        mode: 0600
+        access_time: preserve
+        modification_time: preserve
+
+    - name: Inject SSH payload
+      when: folder.stat.exists == false
+      blockinfile:
+        path: "/home/cc/job_gateway/{{ssh_key}}"
+        block: "{{ssh_payload}}"
+        marker: ""
+        marker_begin: ""
+        marker_end: ""
+
+# create mongo.json
+
+    - name: Create mongo.json file
+      when: folder.stat.exists == false
+      become_user: cc
+      become_method: su
+      file:
+        path: /home/cc/job_gateway/mongo.json
+        state: touch
+        access_time: preserve
+        modification_time: preserve
+      register: file_created
+
+    - name: Fill mongo.json file
+      when: file_created.changed
+      lineinfile:
+        path: /home/cc/job_gateway/mongo.json
+        regexp: '^{.*}$'
+        state: present
+        line: '{\"ssh_port\": 22, \"ssh_username\": \"cc\", \"mongo_ip\": \"{{ mongo_ip }}\", \"ssh_key\": \"{{ ssh_key }}\"}'
+
+# create instance.json
+
+    - name: Create instance.json file
+      when: folder.stat.exists == false
+      become_user: cc
+      become_method: su
+      file:
+        path: /home/cc/job_gateway/instance.json
+        state: touch
+
+    - name: Fill instance.json file
+      when: folder.stat.exists == false
+      lineinfile:
+        path: /home/cc/job_gateway/instance.json
+        regexp: '^{.*}$'
+        state: present
+        line: '{\"model_type\": \"{{ model_type }}\", \"instance_id\": \"{{ instance_id }}\"}'
+

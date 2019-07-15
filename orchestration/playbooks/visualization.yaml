@@ -1,0 +1,160 @@
+# Install visualization server foundation (tomcat)
+# partially adapted from https://github.com/malk/ansible-java8-oracle/blob/master/tasks/main.yml
+---
+- name: Install visualization server foundation
+  become: true
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Excuting Common Role
+      include_role:
+        name: commons
+        tasks_from: commons
+      vars:
+        extravars: "{{extravars}}"
+
+    - name: Wait for connection to come up, if needed
+      wait_for_connection:
+        timeout: 300
+        sleep: 5
+
+    - name: Get any updates and refresh cache
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: yes
+      register: apt_status
+      until: apt_status is success
+      delay: 10
+      retries: 60
+
+    - name: Actually run the Java installer
+      apt:
+        name=default-jre-headless
+        state=latest
+
+    - name: Update environment variables
+      lineinfile:
+        path: /etc/environment
+        regexp: '^JAVA_HOME.+'
+        line: 'JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64/bin/"'
+        state: present
+        create: yes
+
+    - name: Add Tomcat group for encapsulation
+      group:
+        name: tomcat
+        state: present
+      register: tomcat_installation
+
+    - name: Add tomcat user for encapsulation
+      user:
+        name: tomcat
+        group: tomcat
+        shell: /bin/false
+        home: /opt/tomcat
+        create_home: true
+        state: present
+
+    - name: Download and unpack the Tomcat installation
+      when: tomcat_installation.changed
+      unarchive:
+        src: http://apache.cs.utah.edu/tomcat/tomcat-9/v9.0.14/bin/apache-tomcat-9.0.14.tar.gz
+        dest: /opt/tomcat
+        remote_src: yes
+        group: tomcat
+        owner: tomcat
+        extra_opts:
+          - --strip-components=1
+
+    - name: Create Tomcat service file
+      when: tomcat_installation.changed
+      copy:
+        dest: /etc/systemd/system/tomcat.service
+        content: |
+          [Unit]
+          Description=Apache Tomcat Web Application Container
+          After=network.target
+
+          [Service]
+          Type=forking
+
+          Environment=JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          Environment=CATALINA_PID=/opt/tomcat/temp/tomcat.pid
+          Environment=CATALINA_HOME=/opt/tomcat
+          Environment=CATALINA_BASE=/opt/tomcat
+          Environment=CATALINA_OPTS="-Xms512M -Xmx1024M -server -XX:+UseParallelGC"
+          Environment=JAVA_OPTS="-Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom"
+
+          ExecStart=/opt/tomcat/bin/startup.sh
+          ExecStop=/opt/tomcat/bin/shutdown.sh
+
+          User=tomcat
+          Group=tomcat
+          UMask=0007
+          RestartSec=10
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Remove existing ROOT webapp (to prepare for deployment)
+      when: tomcat_installation.changed
+      file:
+        state: absent
+        path: /opt/tomcat/webapps/ROOT/
+
+    - name: Re-create the missing folder
+      when: tomcat_installation.changed
+      file:
+        state: directory
+        path: /opt/tomcat/webapps/ROOT/
+        owner: tomcat
+        group: tomcat
+
+    - name: Unzip the WAR contents into the target directory
+      when: tomcat_installation.changed
+      unarchive:
+        src: http://www.public.asu.edu/~ygarg/datastorm/DVProj.war
+        remote_src: yes
+        dest: /opt/tomcat/webapps/ROOT
+        group: tomcat
+        owner: tomcat
+
+    - name: Set the Mongo IP settings
+      when: tomcat_installation.changed
+      replace:
+        path: /opt/tomcat/webapps/ROOT/WEB-INF/config/mongo.json
+        regexp: '(.*)("{{item}}.{0,}?".{0,}?".{0,}?")(.*)'
+        replace: '\1"{{ item }}":"{{ mongo_ip }}"\3'
+      loop: ["SSH_HOST", "REMOTE_HOST"]
+
+    - name: Set the Mongo IP settings
+      when: tomcat_installation.changed
+      replace:
+        path: /opt/tomcat/webapps/ROOT/WEB-INF/config/kepler.json
+        regexp: '(.*)("{{item}}.{0,}?".{0,}?".{0,}?")(.*)'
+        replace: '\1"{{ item }}":"{{ kepler_ip }}"\3'
+      loop: ["KEPLER_IP"]
+
+    - name: Allow SSH connections
+      ufw:
+        rule: allow
+        name: OpenSSH
+
+    - name: Allow Tomcat access
+      ufw:
+        rule: allow
+        port: 8080
+
+    - name: Enable firewall
+      ufw:
+        state: enabled
+
+    - name: Restart Tomcat service to reload configuration
+      when: tomcat_installation.changed
+      service:
+        name: tomcat
+        enabled: yes
+        state: started

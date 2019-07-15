@@ -2,11 +2,11 @@
 # non-Python applications to update their status in the state database without having to
 # know anything about Mongo, SSH, etc.
 
+import json
 import os
 import shutil
 import sys
 import time
-import json
 
 from bson.json_util import loads, dumps
 from bson.objectid import ObjectId
@@ -37,19 +37,21 @@ def main(command):
 
         # read the configuration file from next to this file
         with open(ROOT_PATH + "mongo.json") as json_data:
-            mongo_config = loads(json_data.read())
+            raw_data = json_data.read().replace('\\"', '\"')
+            mongo_config = loads(raw_data)
 
         # connect to the mongo database using that configuration
         MONGO_SERVER = SSHTunnelForwarder((mongo_config["mongo_ip"], int(mongo_config["ssh_port"])),
                                           ssh_pkey=(ROOT_PATH + mongo_config["ssh_key"]),
                                           ssh_username=mongo_config["ssh_username"],
-                                          remote_bind_address=('127.0.0.1', 27017),
+                                          remote_bind_address=('localhost', 27017),
                                           )
         MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
-        MONGO_CLIENT = PyMongoClient('127.0.0.1', MONGO_SERVER.local_bind_port)  # connect to mongo
+        MONGO_CLIENT = PyMongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
 
         with open(ROOT_PATH + "instance.json") as json_data:
-            STATE_CONFIG = loads(json_data.read())
+            raw_data = json_data.read().replace('\\"', '\"')
+            STATE_CONFIG = loads(raw_data)
 
         log("Mongo connection established!")
 

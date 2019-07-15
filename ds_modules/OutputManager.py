@@ -17,12 +17,15 @@ DS_RESULTS = None
 
 NOTIFIER_FOLDER = "/home/cc/viz-actor/"
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=('127.0.0.1', 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
 
@@ -37,10 +40,10 @@ def initializeDB():
     global DS_CONFIG, DS_RESULTS, DS_STATE
 
     # open the SSH tunnel to the mongo server
-    mongo_server.start()
+    MONGO_SERVER.start()
 
     # connect to mongo
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)
     print(' - Connected to DataStorm MongoDB')
 
     # DS Results
@@ -105,12 +108,12 @@ def main():
     if current_model_state["subactor_state"] != "OutputManager":
         print("Current state: {0}".format(current_model_state["subactor_state"]))
         print("We can't execute, because it's not the OutputManagers's turn yet.")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return
 
     if len(current_model_state["result_pool"]["to_output"]) == 0:
         print("Nothing to dispatch, stopping now...")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return  # we were able to align, but there were no records to alignment manager; just exit
 
     # Get DSARs that send to Output manager
@@ -135,11 +138,12 @@ def main():
     print("State change, OM to WM" + " for model {0}".format(MY_MODEL))
 
     # send the display config to viz notifier
-    send_config_to_viz_notifier(MY_MODEL)
+    # TODO: Disabled until this can be fixed
+    # send_config_to_viz_notifier(MY_MODEL)
 
     # Exit
     print("OutputManager complete! Closing Mongo connection...")
-    mongo_server.close()
+    MONGO_SERVER.close()
     print("Mongo connection closed.")
 
 

@@ -1,7 +1,7 @@
 //All layer data, can be updated through websocket
 var VISUALIZATION_JSON = [];
 //All google maps polygon data
-var GRIDS = {};
+var GRIDS = [];
 //Cached mongo data based on timestamp
 var CACHE = {};
 //Event listeners attached to google maps polygons
@@ -14,10 +14,10 @@ var EXPLANATIONS = {};
 //Ex. VISUALIZATION_FUNCTIONS["heat_map"](dataJson, optionsJson);
 var VISUALIZATION_FUNCTIONS = {
 		//Heat map creates rectangles colored according to the value and color scale (defined in VISUALIZATION_JSON)
-		"heat_map": function(data, options) {
+		"heat_map": function(mapId, data, options) {
 			//If polygon layer already exists, delete old layer
-			if(GRIDS[options.name]) clearGrid(options.name);
-			else GRIDS[options.name] = [];
+			if(GRIDS[mapId][options.name]) clearGrid(mapId, options.name);
+			else GRIDS[mapId][options.name] = [];
 			
 			//Set min and max for color scaling
 			var min = options.min || getMinValue(data, options.values["value"]);
@@ -45,7 +45,7 @@ var VISUALIZATION_FUNCTIONS = {
 				
 				
 				//Create polygon object and store in GRIDS array
-				GRIDS[options.name][i] = new google.maps.Polygon({
+				GRIDS[mapId][options.name][i] = new google.maps.Polygon({
 					cLat: (lat + lat + options.size) / 2,
 					cLng: (lng + lng + options.size) / 2,
 					paths: coords,
@@ -58,6 +58,7 @@ var VISUALIZATION_FUNCTIONS = {
 				
 				//Add event listener to this polygon
 				addListener({
+					mapId: mapId,
 					id: json._id,
 					name: options.name,
 					lng: parseFloat(lng.toFixed(2)),
@@ -67,7 +68,11 @@ var VISUALIZATION_FUNCTIONS = {
 					paths: coords
 				}, function(content) {
 					if ($("#info-graphics").css("display") === "none") $("#info-graphics").css("display", "block");
-
+					
+					$(".map").removeClass("active");
+					$("#map-instance-" + (content.mapId + 1)).addClass("active");
+					
+					$("#instance-value").text(content.mapId + 1);
 					$("#location-value").text(content.lat + ", " + content.lng);
 					$("#flood-value").text(content.value.toFixed(2));
 					$("#flood-color").css("background-color", content.color).css("opacity", 0.4);
@@ -86,10 +91,10 @@ var VISUALIZATION_FUNCTIONS = {
 			}
 		},
 		//Heat map creates rectangles sized according to the value and size scale (defined in VISUALIZATION_JSON)
-		"square_map": function(data, options) {
+		"square_map": function(mapId, data, options) {
 			//If polygon layer already exists, delete old layer
-			if(GRIDS[options.name]) clearGrid(options.name);
-			else GRIDS[options.name] = [];
+			if(GRIDS[mapId][options.name]) clearGrid(mapId, options.name);
+			else GRIDS[mapId][options.name] = [];
 			
 			//Set min and max for size scaling
 			var min = options.min || getMinValue(data, options.values["value"]);
@@ -119,7 +124,7 @@ var VISUALIZATION_FUNCTIONS = {
 
 				if(value > 2) {
 				//Create polygon object and store in GRIDS array
-					GRIDS[options.name][i] = new google.maps.Polygon({
+					GRIDS[mapId][options.name][i] = new google.maps.Polygon({
 						paths: coords,
 						fillColor: color,
 						fillOpacity: 0.0,
@@ -131,6 +136,7 @@ var VISUALIZATION_FUNCTIONS = {
 					
 					//Add event listener to this polygon
 					addListener({
+						mapId: mapId,
 						id: json._id,
 						name: options.name,
 						lng: parseFloat(lng.toFixed(2)),
@@ -140,7 +146,11 @@ var VISUALIZATION_FUNCTIONS = {
 						paths: coords
 					}, function(content) {
 						if ($("#info-graphics").css("display") === "none") $("#info-graphics").css("display", "block");
-
+						
+						$(".map").removeClass("active");
+						$("#map-instance-" + (content.mapId + 1)).addClass("active");
+						
+						$("#instance-value").text(content.mapId + 1);
 						$("#location-value").text(content.lat + ", " + content.lng);
 						$("#rain-value").text(content.value.toFixed(2));
 						$("#rain-color").css("background-color", content.color).css("opacity", 0.4);
@@ -160,10 +170,10 @@ var VISUALIZATION_FUNCTIONS = {
 
 			}
 		},
-		"vector": function(data, options) {
+		"vector": function(mapId, data, options) {
 			//If polygon layer already exists, delete old layer
-			if(GRIDS[options.name]) clearGrid(options.name);
-			else GRIDS[options.name] = [];
+			if(GRIDS[mapId][options.name]) clearGrid(mapId, options.name);
+			else GRIDS[mapId][options.name] = [];
 			
 			//For each json object in the data, create google maps api polygon
 			for (var i = 0; i < data.length; i++) {
@@ -185,7 +195,7 @@ var VISUALIZATION_FUNCTIONS = {
 
 				if (u != 0){
 					//Create polygon object and store in GRIDS array
-					GRIDS[options.name][i] = new google.maps.Polyline({
+					GRIDS[mapId][options.name][i] = new google.maps.Polyline({
 						path: coords,
 						geodesic: true,
 						strokeColor: '#FF0000',
@@ -194,7 +204,7 @@ var VISUALIZATION_FUNCTIONS = {
 						zIndex: 2
 					});
 					//Create polygon object and store in GRIDS array
-					GRIDS[options.name][i + data.length] = new google.maps.Circle({
+					GRIDS[mapId][options.name][i + data.length] = new google.maps.Circle({
 						strokeOpacity: 0,
 						fillColor: '#FF0000',
 						fillOpacity: 0.4,
@@ -205,6 +215,7 @@ var VISUALIZATION_FUNCTIONS = {
 					
 					//Add event listener to this polygon
 					addListener({
+						mapId: mapId,
 						id: json._id,
 						name: options.name,
 						lng: parseFloat(lng.toFixed(2)),
@@ -212,6 +223,9 @@ var VISUALIZATION_FUNCTIONS = {
 						u: u.toFixed(2),
 						v: v.toFixed(2)
 					}, function(content) {
+						if ($("#info-graphics").css("display") === "none") $("#info-graphics").css("display", "block");
+						
+						$("#instance-value").text(content.mapId + 1);
 						$("#location-value").text(content.lat + ", " + content.lng);
 						$("#wind-value").text(Math.sqrt(content.u * content.u + content.v * content.v).toFixed(2));
 						$("#u-wind-value").text(content.u);
@@ -221,10 +235,10 @@ var VISUALIZATION_FUNCTIONS = {
 
 			}
 		},
-		"circle_map": function(data, options) {
+		"circle_map": function(mapId, data, options) {
 			//If polygon layer already exists, delete old layer
-			if(GRIDS[options.name]) clearGrid(options.name);
-			else GRIDS[options.name] = [];
+			if(GRIDS[mapId][options.name]) clearGrid(mapId, options.name);
+			else GRIDS[mapId][options.name] = [];
 			
 			//For each json object in the data, create google maps api polygon
 			for (var i = 0; i < data.length; i++) {
@@ -232,26 +246,106 @@ var VISUALIZATION_FUNCTIONS = {
 				
 				var lng = parseFloat(json.coordinate[0]);
 				var lat = parseFloat(json.coordinate[1]);
-				var latlng = new google.maps.LatLng(lat, lng);
+				var label = json.observation[options.values["label"]];
+				var u = -parseFloat(json.observation[options.values["v"]]);
+				var v = -parseFloat(json.observation[options.values["u"]]);
+				var magnitude = Math.sqrt(u * u + v * v);
+				var nu = u / magnitude;
+				var nv = v / magnitude;
 				
-				//Create polygon object and store in GRIDS array
-				GRIDS[options.name][i] = new google.maps.Circle({
+				var weight = parseInt(label.substring(1)) / 50;
+				//var color = "rgba(" + parseInt(255 * weight) + ", " + parseInt(165 * weight) + ", 0, 1)";
+				
+				var color = "orange";
+				
+				var radius = 0.027;
+				var coords = [
+					{lat: lat + nu / 15, lng: lng + nv / 15},
+					{lat: lat + nv * radius, lng: lng + -nu * radius},
+					{lat: lat + -nv * radius, lng: lng + nu * radius}
+				];
+				
+				GRIDS[mapId][options.name][i] = new google.maps.Polygon({
+					path: coords,
 					strokeOpacity: 0,
-					fillColor: 'orange',
+					fillColor: color,
 					fillOpacity: options.opacity || 0.4,
-					center: latlng,
-					radius: 3000 * json.observation,
 					zIndex: 4
 				});
 				
+				//Create polygon object and store in GRIDS array
+				GRIDS[mapId][options.name][i + data.length] = new google.maps.Circle({
+					strokeOpacity: 0,
+					fillColor: color,
+					fillOpacity: options.opacity || 0.4,
+					center: new google.maps.LatLng(lat, lng),
+					radius: 3000,
+					zIndex: 4
+				});
+				
+				GRIDS[mapId][options.name][i + data.length * 2] = new google.maps.Circle({
+					strokeOpacity: 0,
+					fillColor: 'black',
+					fillOpacity: options.opacity || 0.4,
+					center: new google.maps.LatLng(lat + u, lng + v),
+					radius: 1500,
+					zIndex: 4
+				});
+				
+				GRIDS[mapId][options.name][i + data.length * 3] = new google.maps.Polyline({
+					path: [
+						{lat: lat, lng: lng},
+						{lat: lat + u, lng: lng + v}
+					],
+					geodesic: true,
+					strokeColor: 'black',
+					strokeOpacity: 0.0,
+					icons: [{
+						icon: {
+							path: 'M 0,-1 0,1',
+							strokeOpacity: options.opacity || 0.4,
+							scale: 2
+					    },
+			            offset: '0',
+			        	repeat: '20px'
+			        }],
+					zIndex: 2
+				});
+				
+				try {
+					GRIDS[mapId][options.name][i + data.length * 4] = new MapLabel({
+						text: label,
+						position: new google.maps.LatLng(lat, lng + radius * 1.5),
+						fontSize: 10,
+						align: 'center'
+					});
+				} catch (err) {
+					initMaps();
+					GRIDS[mapId][options.name][i + data.length * 4] = new MapLabel({
+						text: label,
+						position: new google.maps.LatLng(lat, lng + radius * 1.5),
+						fontSize: 10,
+						align: 'center'
+					});
+				}
+				
 				//Add event listener to this polygon
 				addListener({
+					mapId: mapId,
 					id: json._id,
 					name: options.name,
 					lng: parseFloat(lng.toFixed(2)),
-					lat: parseFloat(lat.toFixed(2))
+					lat: parseFloat(lat.toFixed(2)),
+					label: label
 				}, function(content) {
+					if ($("#info-graphics").css("display") === "none") $("#info-graphics").css("display", "block");
+					
+					$(".map").removeClass("active");
+					$("#map-instance-" + (content.mapId + 1)).addClass("active");
+					
+					$("#instance-value").text(content.mapId + 1);
 					$("#location-value").text(content.lat + ", " + content.lng);
+					$("#human-mobility-value").text(content.label);
 					
 					//Update explain button link
 					EXPLANATIONS[content.name] = function() {
@@ -269,42 +363,49 @@ var VISUALIZATION_FUNCTIONS = {
 };
 
 //Takes in visualization layer json and generates polygons
-function generate(json, queue, i) {
+function generate(json, queue, layerId, mapId) {
 	queue = queue || [];
-	i = i || 0;
+	layerId = layerId || 0;
+	mapId = mapId || 0;
 
-	if(i == 0) {
-		clearListeners();
+	if(layerId == 0) {
+		clearListeners(mapId);
 		for(var j in json) {
-			setGridVisibility(json[j].options.name, false);
+			setGridVisibility(mapId, json[j].options.name, false);
 		}
 	}
 
-	var v = json[i];
+	var v = json[layerId];
+	
+	var offset = mapId * 10800 * 3;
 	
 	//Query to be passed to mongodb
 	var data = JSON.stringify({
 		model_type: v.model_type,
-		start_time: getTimestamp(),
-		end_time: getTimestamp() + 10800,
+		start_time: getTimestamp() + offset,
+		end_time: getTimestamp() + 10800 + offset,
+		instance: mapId,
 		threshold: v.options.min
 	});
 
 	if(CACHE[data]) {
 		//Data is already cached, use cached data
 		//console.log("Getting cached data: " + data);
-		VISUALIZATION_FUNCTIONS[v.visual_type](CACHE[data], v.options);
+		VISUALIZATION_FUNCTIONS[v.visual_type](mapId, CACHE[data], v.options);
 		if(getFilter(v.options.name)) {
 			queue.push(v.options.name);
 		}
 
-		if(i < json.length - 1) {
-			generate(json, queue, i + 1);
+		if(layerId < json.length - 1) {
+			generate(json, queue, layerId + 1, mapId);
 			return;
 		}
 		else {
 			for(var j in queue) {
-				setGridVisibility(queue[j], true);
+				setGridVisibility(mapId, queue[j], true);
+			}
+			if(mapId < MAPS.length - 1) {
+				generate(json, [], 0, mapId + 1);
 			}
 		}
 	}
@@ -323,7 +424,7 @@ function generate(json, queue, i) {
 					var delta = res[0].timestamp - getTimestamp();
 					if(delta >= 0 && delta < 10800) {
 						//console.log("DATA CORRECT");
-						VISUALIZATION_FUNCTIONS[v.visual_type](res, v.options);
+						VISUALIZATION_FUNCTIONS[v.visual_type](mapId, res, v.options);
 					}
 					//If not, attempt to generate grid based on cache
 					else {
@@ -333,11 +434,11 @@ function generate(json, queue, i) {
 						updatedData = JSON.stringify(updatedData);
 						if(CACHE[updatedData]) {
 							//Data incorrect, but cache with correct data exists, use cached data
-							VISUALIZATION_FUNCTIONS[v.visual_type](CACHE[updatedData], v.options);
+							VISUALIZATION_FUNCTIONS[v.visual_type](mapId, CACHE[updatedData], v.options);
 						}
 						else {
 							//Data incorrect and cache does not exist, regenerate again
-							generate(json);
+							generate(json, [], 0, mapId);
 							return;
 						}
 					}
@@ -347,13 +448,16 @@ function generate(json, queue, i) {
 					}
 				}
 				
-				if(i < json.length - 1) {
-					generate(json, queue, i + 1);
+				if(layerId < json.length - 1) {
+					generate(json, queue, layerId + 1, mapId);
 					return;
 				}
 				else {
 					for(var j in queue) {
-						setGridVisibility(queue[j], true);
+						setGridVisibility(mapId, queue[j], true);
+					}
+					if(mapId < MAPS.length - 1) {
+						generate(json, [], 0, mapId + 1);
 					}
 				}
 			}
@@ -362,15 +466,15 @@ function generate(json, queue, i) {
 }
 
 //Sets the visibility of a grid layer
-function setGridVisibility(name, state) {
-	var grid = GRIDS[name];
-	for(var i in grid) grid[i].setMap(state ? map : null);
+function setGridVisibility(mapId, name, state) {
+	var grid = GRIDS[mapId][name];
+	for(var i in grid) grid[i].setMap(state ? MAPS[mapId] : null);
 }
 
 //Deletes all polygons in grid
-function clearGrid(name) {
-	setGridVisibility(name, false);
-	GRIDS[name] = [];
+function clearGrid(mapId, name) {
+	setGridVisibility(mapId, name, false);
+	GRIDS[mapId][name] = [];
 }
 
 //Returns GMT timestamp according to slider
@@ -424,8 +528,8 @@ function getLegendIndex(val, min, max, size) {
 //Makes an invisible grid that pools together nearby polygons so one click will activate all polygon listeners in that grid
 function addListener(content, funct) {
 	//If event listener already exists in this location, add polygon data to this listener
-	for(var i in LISTENERS) {
-		var l = LISTENERS[i];
+	for(var i in LISTENERS[content.mapId]) {
+		var l = LISTENERS[content.mapId][i];
 		if(Math.abs(l.contents[0].lat - content.lat) < .05 && Math.abs(l.contents[0].lng - content.lng) < .05) {
 			l.contents.push(content);
 			l.functions.push(funct);
@@ -434,19 +538,20 @@ function addListener(content, funct) {
 	}
 	
 	//Make new listener
-	LISTENERS.push({
+	LISTENERS[content.mapId].push({
 		polygon: null,
 		contents: [content],
 		functions: [funct]
 	});
-	var listener = LISTENERS[LISTENERS.length - 1];
+	var listener = LISTENERS[content.mapId][LISTENERS[content.mapId].length - 1];
 	
 	//Create invisible polygon on top of the other polygons to hold event listener
 	//Allows for more than one layer to be clicked at once
 	var polygon = new google.maps.Polygon({
 		fillOpacity: 0.0,
 		listener: listener,
-		map: map,
+		//change this
+		map: MAPS[content.mapId],
 		paths: [
 			{lat: content.lat, lng : content.lng},
 			{lat: content.lat, lng : content.lng + 0.1},
@@ -460,6 +565,11 @@ function addListener(content, funct) {
 	listener.polygon = polygon;
 
 	google.maps.event.addListener(polygon, 'click', function() {
+		$('#map').removeClass('col-sm-12');
+		$('#map').addClass('col-sm-8');
+		$('#sidebar').addClass('col-sm-4');
+		$('#sidebar').css('display', 'block');
+		
 		var l = polygon.listener;
 		for(var i in l.contents) {
 			l.functions[i](l.contents[i]);
@@ -469,10 +579,64 @@ function addListener(content, funct) {
 
 //Clears all google maps polygon event listeners
 //Called when regenerating polygons in generate()
-function clearListeners() {
-	for(var i in LISTENERS) {
-		var l = LISTENERS[i];
+function clearListeners(mapId) {
+	for(var i in LISTENERS[mapId]) {
+		var l = LISTENERS[mapId][i];
 		l.polygon.setMap(null);
 	}
-	LISTENERS = [];
+	LISTENERS[mapId] = [];
 }
+
+function LogOut(){
+    $.ajax({
+	    type: "POST",
+	    url: "Logoutconn",//servlet
+	    contentType: "application/json", // NOT dataType!
+	    data: null,
+	    success: function(response) {
+
+	    	if( r == 200){
+	    		//todo
+	    	}
+	    	if(r == 400){
+	    		//todo
+	    		
+	    	}
+	    	
+	    }
+	});
+
+}
+
+/*function updateFloodThreshold(flag){
+	try{
+		var $value = $("#flood-control-value");
+		var currVal = parseInt($value.text());
+		if (flag){
+			// Increase Flood Threshold, if flag is true;
+			$value.text(currVal+1);
+		} else {
+			// Decrease Flood Threshold, if flag is true;
+			$value.text(currVal-1);
+		}
+		setFloodGrids();
+		toggleBarPlot();
+	} catch(err){
+		console.error(err);
+	}
+}
+
+$(window).bind('load', function() {
+	try	{
+		 COUPLING MOUSE OVER EVENTS 
+		$("#flood-control-down").on("click", function(){
+			updateFloodThreshold(false);
+		});
+		$("#flood-control-up").on("click", function(){
+			updateFloodThreshold(true);
+		});
+		$('[data-toggle="tooltip"]').tooltip();	
+	} catch(err){
+		console.error(err);
+	}
+});*/

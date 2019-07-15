@@ -29,12 +29,15 @@ MY_MODEL = None
 WINDOW_SIZE = None
 SHIFT_SIZE = None
 
+MONGO_IP = "ds_core_mongo"
+MONGO_KEYFILE = "dsworker_rsa"
+
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    (MONGO_IP, 22),
     ssh_username="cc",
-    ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=('127.0.0.1', 27017)
+    ssh_pkey="~/.ssh/{0}".format(MONGO_KEYFILE),
+    remote_bind_address=('localhost', 27017)
 )
 
 # Database in DS MongoDB
@@ -46,55 +49,49 @@ DS_RESULTS = None
 
 
 # return alignment strategy from ds_config
-def getAlignmentStrategy():
+def get_alignment_strategy():
     alignment_strategy = DS_CONFIG['alignment_settings']['alignment_strategy']
     return alignment_strategy
 
 
 # Read received DSARs from ds_state.kepler.
-def getDSARs():
+def get_dsar():
     print('Fetching received DSARs...')
-    kepler_state = DS_STATE.kepler.find_one({"model_type": MY_MODEL})
-    dsar_list = kepler_state["result_pool"]["to_align"]
-    return dsar_list
+    return DS_STATE.kepler.find_one({"model_type": MY_MODEL})["result_pool"]["to_align"][0]
 
 
 # Given a DSAR, return a list of dsir which belong to it.
-def getDSIRs(dsar):
+def get_dsir(dsar):
     print('Extract DSAR...')
-    targetDSAR = DS_RESULTS.dsar.find_one({"_id": ObjectId(dsar)})
-    dsir_list = targetDSAR['children']
-    return dsir_list
+    return DS_RESULTS.dsar.find_one({"_id": ObjectId(dsar)})['children']
 
 
-def getDSFR(dsir_id):
+def get_dsfr(dsir_id):
     print('Get DSFR list...')
-    dsfr_list = DS_RESULTS.dsfr.find({"parent": ObjectId(dsir_id)})
-    return dsfr_list
+    return DS_RESULTS.dsfr.find({"parent": ObjectId(dsir_id)})
 
 
 # Check which case for alignment
-def getAlignment(dsar_id, current_begin, current_end, tBegin, tEnd, alignment_strategy):
+def get_alignment(dsar_id, current_begin, current_end, t_begin, t_end, alignment_strategy):
     result_id = None
 
     # Case 0: given dsir is located in current time window
-    if tBegin >= current_begin and tEnd <= current_end:
+    if t_begin >= current_begin and t_end <= current_end:
         print("Don't need to aligned...")
         # put updated dsar id to Sampling Manager
         DS_STATE.kepler.update_one({"model_type": MY_MODEL},
                                    {"$push": {"result_pool.to_sample": ObjectId(dsar_id)}})
         # remove updated dar id from Alignment Manager
         DS_STATE.kepler.update_one({"model_type": MY_MODEL},
-                                   {"$set": {"result_pool.to_align": []}})
-
+                                   {"$pop": {"result_pool.to_align": -1}})
 
     # Case 1: given dsir cross the boundary of current window
-    elif tBegin >= current_begin and tEnd > current_end:
+    elif t_begin >= current_begin and t_end > current_end:
         print("Need to be chunked...")
-        result_id = chunking(dsar_id, current_begin, current_end, tBegin, tEnd, alignment_strategy)
+        result_id = chunking(dsar_id, current_begin, current_end, t_begin, t_end, alignment_strategy)
 
     # Case 2: given dsir over the boundary of current window
-    elif tBegin >= current_end:
+    elif t_begin >= current_end:
         print("Need to be shifted to next window...")
 
     return result_id
@@ -102,46 +99,46 @@ def getAlignment(dsar_id, current_begin, current_end, tBegin, tEnd, alignment_st
 
 # TODO: should we update existed DSAR/DSIR/DSFR or create new DSAR/DSIR/DSFR??? \
 # Current approach: update existed DSAR and create new DSIR and DSFR
-def updateDSAR(dsar_id, newBegin, newEnd):
+def update_dsar(dsar_id, new_begin, new_end):
     # update DSAR with proper window
-    targetDSAR = DS_RESULTS.dsar.find_one({"_id": ObjectId(dsar_id)})
+    target_dsar = DS_RESULTS.dsar.find_one({"_id": ObjectId(dsar_id)})
 
     # Fetch all children who within new time window
-    dsir_list = targetDSAR['children']
+    dsir_list = target_dsar['children']
     updated_disr_list = []
     for dsir_id in dsir_list:
-        targetDSIR = DS_RESULTS.dsir.find_one({"_id": ObjectId(dsir_id)})
+        target_dsir = DS_RESULTS.dsir.find_one({"_id": ObjectId(dsir_id)})
 
         # Create new DSIRs for this updated DSAR
-        new_DSIR = dict()
-        new_DSIR['parent'] = targetDSAR['_id']
-        new_DSIR['_id'] = bson.objectid.ObjectId()
-        new_DSIR['metadata']['model_type'] = targetDSIR['metadata']['model_type']
-        new_DSIR['metadata']['temporal']['begin'] = newBegin
-        new_DSIR['metadata']['temporal']['end'] = newEnd
-        new_DSIR['metadata']['temporal']['window_size'] = newBegin
-        new_DSIR['metadata']['temporal']['shift_size'] = newEnd
-        new_DSIR['metadata']['spatial']['top'] = targetDSIR['metadata']['spatial']['top']
-        new_DSIR['metadata']['spatial']['left'] = targetDSIR['metadata']['spatial']['left']
-        new_DSIR['metadata']['spatial']['bottom'] = targetDSIR['metadata']['spatial']['bottom']
-        new_DSIR['metadata']['spatial']['right'] = targetDSIR['metadata']['spatial']['right']
-        new_DSIR['metadata']['spatial']['x_resolution'] = targetDSIR['metadata']['spatial']['x_resolution']
-        new_DSIR['metadata']['spatial']['y_resolution'] = targetDSIR['metadata']['spatial']['y_resolution']
-        updated_disr_list.append(new_DSIR)
+        new_dsir = dict()
+        new_dsir['parent'] = target_dsar['_id']
+        new_dsir['_id'] = bson.objectid.ObjectId()
+        new_dsir['metadata']['model_type'] = target_dsir['metadata']['model_type']
+        new_dsir['metadata']['temporal']['begin'] = new_begin
+        new_dsir['metadata']['temporal']['end'] = new_end
+        new_dsir['metadata']['temporal']['window_size'] = new_begin
+        new_dsir['metadata']['temporal']['shift_size'] = new_end
+        new_dsir['metadata']['spatial']['top'] = target_dsir['metadata']['spatial']['top']
+        new_dsir['metadata']['spatial']['left'] = target_dsir['metadata']['spatial']['left']
+        new_dsir['metadata']['spatial']['bottom'] = target_dsir['metadata']['spatial']['bottom']
+        new_dsir['metadata']['spatial']['right'] = target_dsir['metadata']['spatial']['right']
+        new_dsir['metadata']['spatial']['x_resolution'] = target_dsir['metadata']['spatial']['x_resolution']
+        new_dsir['metadata']['spatial']['y_resolution'] = target_dsir['metadata']['spatial']['y_resolution']
+        updated_disr_list.append(new_dsir)
 
         # Create new DSFRs for this updated DSAR
-        dsfr_list = getDSFR(targetDSIR['_id'])
+        dsfr_list = get_dsfr(target_dsir['_id'])
         selected_dsfr_list = []
         for dsfr in dsfr_list:
-            if dsfr['timestamp'] <= newEnd:
-                new_DSFR = dict()
-                new_DSFR['_id'] = bson.objectid.ObjectId()
-                new_DSFR['parent'] = new_DSIR['_id']
-                new_DSFR['model_type'] = dsfr['model_type']
-                new_DSFR['timestamp'] = dsfr['timestamp']
-                new_DSFR['coordinate'] = dsfr['coordinate']
-                new_DSFR['observation'] = dsfr['observation']
-                selected_dsfr_list.append(new_DSFR)
+            if dsfr['timestamp'] <= new_end:
+                new_dsfr = dict()
+                new_dsfr['_id'] = bson.objectid.ObjectId()
+                new_dsfr['parent'] = new_dsir['_id']
+                new_dsfr['model_type'] = dsfr['model_type']
+                new_dsfr['timestamp'] = dsfr['timestamp']
+                new_dsfr['coordinate'] = dsfr['coordinate']
+                new_dsfr['observation'] = dsfr['observation']
+                selected_dsfr_list.append(new_dsfr)
         DS_RESULTS.dsfr.insert_many(selected_dsfr_list)
 
     if len(updated_disr_list) > 0:
@@ -150,31 +147,31 @@ def updateDSAR(dsar_id, newBegin, newEnd):
     # TODO: if we receive seed DSAR, should we update following fields?
     DS_RESULTS.dsar.update_one({"_id": ObjectId(dsar_id)},
                                {"$set": {
-                                   "metadata.temporal": {"begin": newBegin, "end": newEnd, "window_size": WINDOW_SIZE,
+                                   "metadata.temporal": {"begin": new_begin, "end": new_end, "window_size": WINDOW_SIZE,
                                                          "shift_size": SHIFT_SIZE}}})
     # put updated dsar id to Sampling Manager
     DS_STATE.kepler.update_one({"model_type": MY_MODEL},
                                {"$push": {"result_pool.to_sample": ObjectId(dsar_id)}})
     # remove updated dar id from Alignment Manager
     DS_STATE.kepler.update_one({"model_type": MY_MODEL},
-                               {"$set": {"result_pool.to_align": []}})
-    return targetDSAR['_id']
+                               {"$pop": {"result_pool.to_align": -1}})
+    return target_dsar['_id']
 
 
 # Chunking alignment
-def chunking(dsar_id, current_begin, current_end, tBegin, tEnd, alignment_strategy):
+def chunking(dsar_id, current_begin, current_end, t_begin, t_end, alignment_strategy):
     print('chunking')
     # Update dsar by chunking
     if alignment_strategy == 'equal_window_size':
         print(alignment_strategy)
-        newBegin = current_begin
-        newEnd = current_end
-        updated_dsar_id = updateDSAR(dsar_id, newBegin, newEnd)
+        new_begin = current_begin
+        new_end = current_end
+        updated_dsar_id = update_dsar(dsar_id, new_begin, new_end)
         return updated_dsar_id
 
 
 # Given a list of DSARs, do data alignment during specific time window
-def doAlignment(dsar_list):
+def do_alignment(dsar_list):
     global WINDOW_SIZE, SHIFT_SIZE
 
     # Current status
@@ -188,44 +185,44 @@ def doAlignment(dsar_list):
           ' size: ' + str(current_end - current_begin))
 
     # Get alignment strategy
-    alignment_strategy = getAlignmentStrategy()
-    alignedDSAR_list = []
+    alignment_strategy = get_alignment_strategy()
+    aligned_dsar_list = []
 
     # Receive one single DSAR
     if len(dsar_list) == 1:
-        targetDSAR_id = dsar_list[0]
-        targetDSAR = DS_RESULTS.dsar.find_one({"_id": ObjectId(targetDSAR_id)})
-        tBegin = targetDSAR['metadata']['temporal']['begin']
-        tEnd = targetDSAR['metadata']['temporal']['end']
-        print('target_begin:' + str(tBegin) + ' target_end: ' + str(tEnd))
-        print('window size for target DSAR: ' + str(tEnd - tBegin))
+        target_dsar_id = dsar_list[0]
+        target_dsar = DS_RESULTS.dsar.find_one({"_id": ObjectId(target_dsar_id)})
+        t_begin = target_dsar['metadata']['temporal']['begin']
+        t_end = target_dsar['metadata']['temporal']['end']
+        print('target_begin:' + str(t_begin) + ' target_end: ' + str(t_end))
+        print('window size for target DSAR: ' + str(t_end - t_begin))
 
         # check model's window size to see if we need to do any alignment
-        alignedDSAR_id = getAlignment(targetDSAR_id, current_begin, current_end, tBegin, tEnd, alignment_strategy)
-        alignedDSAR_list.append(alignedDSAR_id)
+        aligned_dsar_id = get_alignment(target_dsar_id, current_begin, current_end, t_begin, t_end, alignment_strategy)
+        aligned_dsar_list.append(aligned_dsar_id)
     # Receive multiple DSARs
     else:
         for dsar_id in dsar_list:
-            targetDSAR = DS_RESULTS.dsar.find_one({"_id": ObjectId(dsar_id)})
-            tBegin = targetDSAR['metadata']['temporal']['begin']
-            tEnd = targetDSAR['metadata']['temporal']['end']
+            target_dsar = DS_RESULTS.dsar.find_one({"_id": ObjectId(dsar_id)})
+            t_begin = target_dsar['metadata']['temporal']['begin']
+            t_end = target_dsar['metadata']['temporal']['end']
             # check model's window size to see if we need to do any alignment
-            alignedDSAR_id = getAlignment(dsar_id, current_begin, current_end, tBegin, tEnd, alignment_strategy)
-            alignedDSAR_list.append(alignedDSAR_id)
+            aligned_dsar_id = get_alignment(dsar_id, current_begin, current_end, t_begin, t_end, alignment_strategy)
+            aligned_dsar_list.append(aligned_dsar_id)
 
     print('done with alignment')
-    return alignedDSAR_list
+    return aligned_dsar_list
 
 
-## Getting Databases and collections
-def initializeDB():
+# Getting Databases and collections
+def initialize_db():
     global DS_CONFIG, DS_RESULTS, DS_STATE
 
     # open the SSH tunnel to the mongo server
-    mongo_server.start()
+    MONGO_SERVER.start()
 
     # connect to mongo
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)
     print(' - Connected to DataStorm MongoDB')
 
     # DS Results
@@ -244,7 +241,7 @@ def main():
     print('*** Alignment Manager in (' + str(MY_MODEL) + ') ***')
 
     # Database initialization
-    initializeDB()
+    initialize_db()
     sdb = DS_STATE.kepler  # works with the kepler-level pool
 
     # check current kepler state
@@ -257,36 +254,39 @@ def main():
     if current_model_state["subactor_state"] != "AlignmentManager":
         print("Current state: {0}".format(current_model_state["subactor_state"]))
         print("We can't execute, because it's not the AlignmentManagers's turn yet.")
-        mongo_server.stop()
+        MONGO_SERVER.stop()
         return
 
-    if len(current_model_state["result_pool"]["to_align"]) == 0:
-        print("There is no data to align, just wait for the next round.")
-        mongo_server.stop()
-        return  # we were able to align, but there were no records to alignment manager; just exit
+    data_processed = False
+    while len(current_model_state["result_pool"]["to_align"]) > 0:
+        data_processed = True
+        print("There is data to align - let's go!")
 
-    print("Alignment is needed and ready to run. Let's go!")
+        # Get DSARs that send to alignment manager
+        dsar_list = get_dsar()
+        print('Received DSARs: ' + str(dsar_list))
 
-    # Get DSARs that send to alignment manager
-    dsar_list = getDSARs()
-    print('Received DSARs: ' + str(dsar_list))
+        # Do alignment
+        aligned_dsar_list = do_alignment(dsar_list)
+        if len(aligned_dsar_list) == 0:
+            print('Error in aligned DSARs!!!')
+            return
 
-    # Do alignment
-    aligned_dsar_list = doAlignment(dsar_list)
-    if len(aligned_dsar_list) == 0:
-        print('Error in aligned DSARs!!!')
-        return
+        # refresh state
+        current_model_state = DS_STATE.kepler.find_one({"model_type": MY_MODEL})
 
-    # alignment complete, update state (from fresh state)
-    print("AM complete, notifying SamplingManager...")
-    current_model_state = DS_STATE.kepler.find_one({"model_type": MY_MODEL})
-    current_model_state["subactor_state"] = "SamplingManager"
-    sdb.save(current_model_state)
-    print("State change, AM to SM" + " for model {0}".format(MY_MODEL))
+    if not data_processed:
+        print("WM said there was data to align, but didn't provide any - this is bad!")
+        # note - don't proceed to next actor, if it's AM's turn and nothing to window - indicates a data flow bug
+    else:
+        # alignment complete, update state (from fresh state)
+        print("AM complete, notifying SamplingManager...")
+        current_model_state = DS_STATE.kepler.find_one({"model_type": MY_MODEL})
+        current_model_state["subactor_state"] = "SamplingManager"
+        sdb.save(current_model_state)
+        print("State change, AM to SM" + " for model {0}".format(MY_MODEL))
 
-    # Close the SSH tunnel
-    print(' - Closed DB connection')
-    mongo_server.stop()
+    MONGO_SERVER.stop()
 
 
 if __name__ == "__main__":

@@ -6,11 +6,11 @@ from sshtunnel import SSHTunnelForwarder
 import pymongo
 import bson
 # SSH / Mongo Configuration #
-mongo_server = SSHTunnelForwarder(
-    ("129.114.33.117", 22),
+MONGO_SERVER = SSHTunnelForwarder(
+    ("ds_core_mongo", 22),
     ssh_username="cc",
     ssh_pkey="~/.ssh/dsworker_rsa",
-    remote_bind_address=('127.0.0.1', 27017)
+    remote_bind_address=('localhost', 27017)
 )
 
 def csvwrite(fname, data, delimit=','):
@@ -21,8 +21,8 @@ def csvwrite(fname, data, delimit=','):
 
 
 def geofilter(file_name, lon_min=-87.64, lat_min=24.43, lon_max=-80.02, lat_max=31.0, verbose=True):
-    mongo_server.start()  # open the SSH tunnel to the mongo server
-    mongo_client = pymongo.MongoClient('127.0.0.1', mongo_server.local_bind_port)  # connect to mongo
+    MONGO_SERVER.start()  # open the SSH tunnel to the mongo server
+    mongo_client = pymongo.MongoClient('localhost', MONGO_SERVER.local_bind_port)  # connect to mongo
     rdb = mongo_client.ds_results.collection
 
     # Creating the GRIB file object.
@@ -94,7 +94,7 @@ def geofilter(file_name, lon_min=-87.64, lat_min=24.43, lon_max=-80.02, lat_max=
     	print('ObjectID: ' + str(doc['_id']))
 
     rdb.save(doc)
-    mongo_server.stop()  # close the SSH tunnel
+    MONGO_SERVER.stop()  # close the SSH tunnel
 
     #csvwrite(file_name + '.rain.csv', rain)
     #csvwrite(file_name + '.lat.csv', lat)

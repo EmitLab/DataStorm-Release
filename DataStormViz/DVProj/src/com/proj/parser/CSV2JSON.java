@@ -24,7 +24,7 @@ public class CSV2JSON extends HttpServlet {
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
-		// Calling type: http://localhost:8080/DVProj/CSV2JSON?useMode=4
+		// Calling type: /DVProj/CSV2JSON?useMode=4
 		
 		try {
 			String[] dateArr = {"20160701","20160702"};
